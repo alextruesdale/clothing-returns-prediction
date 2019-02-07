@@ -157,7 +157,7 @@ unknown.loc[unknown['item_color'] == 'oliv', 'item_color'] = 'olive'
 colours_df = df(known.groupby(['item_id', 'item_color'])['return'].sum())
 colours_df['count'] = known.groupby(['item_id', 'item_color'])['return'].count()
 colours_df['ratio'] = colours_df['return'] / colours_df['count']
-colours_df.loc[colours_df['count'] < 15, 'ratio'] = .48
+colours_df.loc[colours_df['count'] < 35, 'ratio'] = .48
 
 key_colour_composite = list(colours_df.index)
 value_colour_ce = list(colours_df.ratio.values)
@@ -229,7 +229,7 @@ unknown['item_size'] = unknown['item_size'].str.replace('+', '.5', regex = False
 sizes_df = df(known.groupby(['item_id', 'item_size'])['return'].sum())
 sizes_df['count'] = known.groupby(['item_id', 'item_size'])['return'].count()
 sizes_df['ratio'] = sizes_df['return'] / sizes_df['count']
-sizes_df.loc[sizes_df['count'] < 15, 'ratio'] = .48
+sizes_df.loc[sizes_df['count'] < 35, 'ratio'] = .48
 
 key_size_composite = list(sizes_df.index)
 value_size_ce = list(sizes_df.ratio.values)
@@ -406,9 +406,11 @@ unknown.loc[unknown['membership_age_days'] == -1, 'membership_age_days'] = 0
 
 # Create 'time_to_delivery' feature.
 known['time_to_delivery_days'] = (known['delivery_date'] - known['order_date']).dt.days
+known.loc[known['time_to_delivery_days'] < 0, 'time_to_delivery_days'] = -1
 known['time_to_delivery_days'].fillna(9999, inplace = True)
 
 unknown['time_to_delivery_days'] = (unknown['delivery_date'] - unknown['order_date']).dt.days
+unknown.loc[unknown['time_to_delivery_days'] < 0, 'time_to_delivery_days'] = -1
 unknown['time_to_delivery_days'].fillna(9999, inplace = True)
 
 # Create 'assumed_age' feature.
