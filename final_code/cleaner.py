@@ -3,6 +3,7 @@
 """
 Created Feb 8, 2019
 @author: Alex Truesdale
+@email: alex.truesdale@colorado.edu
 
 Jupyter Notebook Kernel (via Hydrogen / Atom) for working on raw challenge data.
 """

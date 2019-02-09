@@ -3,6 +3,7 @@
 """
 Created Feb 8, 2019
 @author: Alex Truesdale
+@email: alex.truesdale@colorado.edu
 
 Container for modeling functions to be used in automated ensembling.
 """
