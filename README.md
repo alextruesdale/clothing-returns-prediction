@@ -5,4 +5,4 @@ Final code is in the 'final_code directory' and is separated between the data cl
 
 My efforts earned me position 4 of 118 in the class.
 
-<img src = "https://github.com/alextruesdale/clothing-returns-prediction/blob/master/repository_media/Banks19380027-0070.png" alt = "1940_plots_11" title = "1940_plots_11" align = "center" width = "830" />
+<img src = "https://github.com/alextruesdale/clothing-returns-prediction/blob/master/repository_media/kaggle.png" alt = "Kaggle Competition" title = "Kaggle Competition" align = "center" width = "830" />
