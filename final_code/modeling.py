@@ -16,11 +16,16 @@ import numpy as np
 import operator
 
 import xgboost as xgb
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
+
 from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_curve, auc
+
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
 
 import keras
 from keras import Sequential
@@ -58,13 +63,9 @@ columns = list(known.columns.values)
 columns.pop(columns.index('return'))
 known = known[columns + ['return']]
 columns = list(known.columns.values)
-columns
 
 # Split target.
 X, y = known.iloc[:, :-1], known.iloc[:, -1].values
-
-# Split test / train data; create dmatrices.
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 123)
 
 ######################################################################################################
 ####
@@ -72,23 +73,23 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, rando
 ####
 ######################################################################################################
 
-# Define parametres for RandomSearch.
+# Define parameters for RandomSearch.
 folds = 5
 parameter_iteration = 20
 parameter_grid = {
-     'learning_rate' : [0.01, 0.03, 0.05, 0.10, 0.15, 0.20],
-     'max_depth' : [3, 4, 5, 6, 8],
-     'min_child_weight' : [1, 3, 5, 7],
-     'gamma' : [0.0, 0.1, 0.2, 0.3, 0.4],
-     'colsample_bytree' : [0.3, 0.4, 0.5, 0.7]
+     'n_estimators':[500, 550, 600, 650, 700, 750],
+     'learning_rate': [0.05, 0.06, 0.07, 0.08],
+     'max_depth': [5, 6, 7, 8],
+     'min_child_weight': [7],
+     'gamma': [0.3],
+     'colsample_bytree': [0.6, 0.7, 0.8]
  }
 
 # Define stratified K-folds fold-er.
 skf = StratifiedKFold(n_splits = folds, shuffle = True, random_state = 1001)
 
 # Define XGB classifier.
-xgb_c = xgb.XGBClassifier(n_estimators = 500, objective = 'binary:logistic',
-                          silent = True, subsample = 0.8, nthread = 1)
+xgb_c = xgb.XGBClassifier(objective = 'binary:logistic', silent = True, subsample = 0.8, nthread = 1)
 
 # Define random search model.
 random_search_xgb = RandomizedSearchCV(xgb_c, param_distributions = parameter_grid,
@@ -103,19 +104,20 @@ random_search_xgb.best_score_
 random_search_xgb.best_params_
 random_search_xgb.cv_results_
 
-# Define final model w/ best parametres.
-xg_classifier = xgb.XGBClassifier(silent = False,
+# Define final model w/ best parameters.
+xg_classifier = xgb.XGBClassifier(silent = 1,
                                   min_child_weight = 7,
                                   scale_pos_weight = 1,
-                                  learning_rate = 0.01,
-                                  colsample_bytree = 0.5,
+                                  learning_rate = 0.05,
+                                  colsample_bytree = 0.8,
                                   subsample = 0.8,
                                   objective = 'binary:logistic',
                                   n_estimators = 500,
                                   reg_alpha = 0.3,
-                                  max_depth = 3,
+                                  max_depth = 5,
                                   gamma = 0.3,
-                                  nthread = 1)
+                                  nthread = 1,
+                                  early_stopping_rounds = 75)
 
 # And fit it.
 xg_classifier.fit(X_train, y_train)
@@ -144,17 +146,16 @@ print('Feature importance Table\n',
 ####
 ######################################################################################################
 
-# Define parametres for RandomSearch.
+# Define parameters for RandomSearch.
 folds = 5
 parameter_iteration = 20
 
-n_estimators = [int(x) for x in np.linspace(start = 400, stop = 1000, num = 10)]
-max_features = ['auto', 'sqrt']
-max_depth = [5, 10, 15, 20, 25]
-max_depth.append(None)
-min_samples_split = [2, 5, 10]
-min_samples_leaf = [1, 2, 4]
-bootstrap = [True, False]
+n_estimators = [int(x) for x in np.linspace(start = 600, stop = 900, num = 8)]
+max_features = ['auto']
+max_depth = [12, 15, 18, 21, 24]
+min_samples_split = [2, 3, 3]
+min_samples_leaf = [2, 3, 4]
+bootstrap = [True]
 
 random_grid = {'n_estimators': n_estimators,
                'max_features': max_features,
@@ -183,7 +184,7 @@ random_search_rf.best_score_
 random_search_rf.best_params_
 random_search_rf.cv_results_
 
-# Define final model w/ best parametres.
+# Define final model w/ best parameters.
 random_forest = RandomForestClassifier(n_estimators = 800,
                                        min_samples_split = 2,
                                        min_samples_leaf = 2,
@@ -300,58 +301,172 @@ prediction_frame.to_csv(prediction_frame_path, index = False)
 ######################################################################################################
 
 import sys
-sys.path.insert(0, '/Users/alextruesdale/Documents/business-analytics/term_project/final_code')
+sys.path.insert(0, '/Users/alextruesdale/Documents/business-analytics/final_code')
 
 import modeling_functions as mf
-models = mf.modeler(X, y, unknown)
 
-# Initialise empty model_dict.
-model_dict = {}
+# Create CV dictionary with indexed folds; test / train splits.
+split_dict = {}
+kf = KFold(n_splits = 10, shuffle = True)
+for i, split in enumerate(kf.split(X)):
+    train_index = split[0]
+    test_index = split[1]
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y[train_index], y[test_index]
+    split_dict.update({i: [X_train, X_test, y_train, y_test]})
 
-# Run NNs
-model_dict.update({'nn_01': models.predictor_nn()})
-model_dict.update({'nn_02': models.predictor_nn(batch_size = 180, capacity = 80)})
-model_dict.update({'nn_03': models.predictor_nn(batch_size = 256, capacity = 124)})
+# Run each fold through ensembler and store fold known predictions, unknown
+# predictions and ensemble test AUC score.
 
-# Run XGBs
-model_dict.update({'xgb_00': models.predictor_xgb()})
-model_dict.update({'xgb_01': models.predictor_xgb(n_estimators = 600, max_depth = 3, learning_rate = .01, colsample_bytree = .5)})
-model_dict.update({'xgb_02': models.predictor_xgb(n_estimators = 550, max_depth = 4, learning_rate = .03, colsample_bytree = .5)})
-model_dict.update({'xgb_03': models.predictor_xgb(n_estimators = 450, max_depth = 5, learning_rate = .05, colsample_bytree = .7)})
+ensemble_dict_final = {}
+for fold, split in split_dict.items():
+    print('FOLD:', fold)
 
-# Run RFs
-model_dict.update({'rf_01': models.predictor_rf(n_estimators = 800, min_samples_split = 2, min_samples_leaf = 2, max_depth = 15)})
-model_dict.update({'rf_02': models.predictor_rf(n_estimators = 650, min_samples_split = 3, min_samples_leaf = 3, max_depth = 20)})
-model_dict.update({'rf_03': models.predictor_rf(n_estimators = 500, min_samples_split = 6, min_samples_leaf = 3, max_depth = 25)})
+    model_dict = mf.model_aggregator(split, unknown)
+    winner = max(model_dict, key = lambda k: operator.itemgetter(2)(model_dict[k]))
+    ensemble_dict_final.update({fold: mf.ensembler(split, model_dict, winner)})
 
-winner = max(model_dict, key = lambda k: operator.itemgetter(2)(model_dict[k]))
-winner
+# Print ensembled AUC scores.
+for x in ensemble_dict_final.values():
+    print(x[2])
 
-for i in range(0, 100):
-    print(i)
-    ensembling_dict = {}
-    for model, data in list(model_dict.items())[:10]:
-        ensemble_name = winner + '_' + model
-        ensemble_scores = np.mean(np.array([model_dict[winner][0], data[0]]), axis = 0)
-        unknown_scores = data[1]
+# Identify winning ensemble and define unknown prediction vector.
+ultimate_winner = max(ensemble_dict_final, key = lambda k: operator.itemgetter(2)(ensemble_dict_final[k]))
+out_scores_single = ensemble_dict_final[ultimate_winner][1]
 
-        false_positive_rate, true_positive_rate, thresholds = roc_curve(y_test, ensemble_scores)
-        roc_auc = auc(false_positive_rate, true_positive_rate)
-        ensembling_dict.update({ensemble_name: [ensemble_scores, unknown_scores, roc_auc]})
+# Average all ensembles into final unknown prediction vector.
+out_scores_aggregate = np.mean(np.array([item[1] for item in ensemble_dict_final.values()]), axis = 0)
 
-    winner = max(ensembling_dict, key = lambda k: operator.itemgetter(2)(ensembling_dict[k]))
-    model_dict[winner] = tuple(ensembling_dict[winner])
-    winner_total = max(model_dict, key = lambda k: operator.itemgetter(2)(model_dict[k]))
-
-    if winner == winner_total:
-        continue
-    else:
-        print(winner_total)
-        print(model_dict[winner_total][2])
-        out_scores = model_dict[winner_total][1]
-        break
-
+# Output as submission .csv file.
 prediction_frame = df(unknown_order_id, columns = ['order_item_id'])
-prediction_frame['return'] = out_scores
-prediction_frame_path = '/Users/alextruesdale/Documents/business-analytics/term_project/predictions/ensemble_predictors/prediction_04.csv'
+prediction_frame['return'] = out_scores_aggregate
+prediction_frame_path = '/Users/alextruesdale/Documents/business-analytics/predictions/ensemble_predictors/prediction_09.csv'
 prediction_frame.to_csv(prediction_frame_path, index = False)
+
+######################################################################################################
+####
+######## Cost Calculations
+####
+######################################################################################################
+
+# Extract prediction vectors for folds from ensemble dict.
+# Get fold indeces in order to re-combine into 100% known data.
+prediction_vectors = [item[0] for item in ensemble_dict_final.values()]
+split_dict_indeces = {i: list(df(split[1]).index) for i, split in split_dict.items()}
+
+# Create data frames with indeces for folds.
+df_list = []
+for i, indeces in split_dict_indeces.items():
+    frame = df(prediction_vectors[i], indeces)
+    df_list.append(frame)
+
+# Join fold dfs and average across rows for reconstructed known prediction.
+df_all = pd.concat([df for df in df_list], axis = 1)
+cost_all = df(df_all.mean(axis = 1), columns = ['prediction'])
+cost_all['item_price'] = X['item_price']
+cost_all['return'] = y
+
+# Cost-optimal (minimiser) ratio calculation.
+c_bG = 0.5 * -cost_all['item_price']
+c_gB = 0.5 * 5 * -(3 + 0.1 * cost_all['item_price'])
+cost_all['τ'] = c_bG / (c_bG + c_gB)
+
+# Define 'warn' if prediction value is greater than τ; reorder columns.
+cost_all['warn'] = cost_all.apply(lambda row: 1 if (row['τ'] * 1) <= row['prediction'] else 0, axis = 1)
+cost_all = cost_all.iloc[:, [1, 3, 0, 2, 4]]
+len(cost_all[cost_all['warn'] == 1])
+cost_all.head(10)
+
+def revenue_calculator(row):
+    """Calculate type 1 and 2 error costs or revenue earned."""
+
+    if row['return'] > row['warn']:
+        revenue = 0.5 * 5 * -(3 + 0.1 * row['item_price'])
+    elif row['warn'] > row['return']:
+        revenue = 0.5 * -row['item_price']
+    elif row['return'] == 1 and row['warn'] == 1:
+        revenue = 0
+    else:
+        revenue = row['item_price']
+
+    return revenue
+
+def cost_minimiser(row):
+    """Calculate type 1 and 2 error costs."""
+
+    if row['return'] > row['warn']:
+        cost = 0.5 * 5 * -(3 + 0.1 * row['item_price'])
+    elif row['warn'] > row['return']:
+        cost = 0.5 * -row['item_price']
+    else:
+        cost = 0
+
+    return cost
+
+# Apply cost calculator at τ = τ1.
+cost_all['revenue'] = cost_all.apply(revenue_calculator, axis = 1)
+cost_all['revenue'].sum()
+cost_all.head(5)
+
+cost_all['cost'] = cost_all.apply(cost_minimiser, axis = 1)
+cost_all['cost'].sum()
+cost_all.head(10)
+
+# Treat τ values with scale of multipliers to examine decision threshold effects on revenue.
+rev_dict = {}
+for i, val in enumerate(np.linspace(.8, 1.7, num = 100)):
+    print('{} of 100 ... treatment multiplier: {}'.format(i + 1, round(val, 2)), end = '\r')
+    cost_all['warn'] = cost_all.apply(lambda row: 1 if (row['τ'] * val) <= row['prediction'] else 0, axis = 1)
+    cost_all['revenue'] = cost_all.apply(revenue_calculator, axis = 1)
+    sum_rev = cost_all['revenue'].sum()
+
+    rev_dict.update({val: sum_rev})
+
+cost_all['cost'].mean()
+
+# Build df from dict; plot revenue as function of τ treatment.
+rev_frame = df(list(rev_dict.values()), list(rev_dict.keys()), columns = ['revenue'])
+rev_frame[rev_frame['revenue'] == rev_frame.max()[0]]
+
+rev_frame.plot.line()
+
+# Treat τ values with scale of multipliers to examine decision threshold effects on revenue.
+cost_dict = {}
+for i, val in enumerate(np.linspace(.98, 1.1, num = 100)):
+    print('{} of 100 ... treatment multiplier: {}'.format(i + 1, round(val, 2)), end = '\r')
+    cost_all['warn'] = cost_all.apply(lambda row: 1 if (row['τ'] * val) <= row['prediction'] else 0, axis = 1)
+    cost_all['cost'] = cost_all.apply(cost_minimiser, axis = 1)
+    sum_cost = cost_all['cost'].sum()
+
+    cost_dict.update({val: sum_cost})
+
+# Build df from dict; plot cost as function of τ treatment.
+cost_frame = df(list(cost_dict.values()), list(cost_dict.keys()), columns = ['cost'])
+cost_frame[cost_frame['cost'] == cost_frame.max()[0]]
+
+cost_frame.plot.line()
+
+######################################################################################################
+####
+######## Calibration Curve
+####
+######################################################################################################
+
+cost_all.head(5)
+
+import matplotlib.lines as mlines
+import matplotlib.pyplot as plt
+from sklearn.calibration import calibration_curve
+
+fig, ax = plt.subplots()
+labels = cost_all['return']
+
+plt_y, plt_x = calibration_curve(labels, cost_all['prediction'], n_bins = 50)
+plt.plot(plt_x, plt_y, marker = 'o', markersize = 4, label = 'All')
+
+ax.set_xlabel('Predicted probability')
+ax.set_ylabel('True probability in each bin')
+plt.plot([0,1], [0,1], c = 'black', linewidth = 0.5, label = 'Ideal')
+
+plt.legend()
+plt.show()

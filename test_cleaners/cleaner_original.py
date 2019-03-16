@@ -26,8 +26,8 @@ pd.set_option('display.max_rows', None)
 df = pd.DataFrame
 
 # Read in data sets.
-known_data = pd.read_csv('term_project/BADS_WS1819_known.csv')
-unknown_data = pd.read_csv('term_project/BADS_WS1819_unknown.csv')
+known_data = pd.read_csv('BADS_WS1819_known.csv')
+unknown_data = pd.read_csv('BADS_WS1819_unknown.csv')
 
 print(len(known_data))
 print(len(unknown_data))
@@ -35,14 +35,14 @@ print(len(unknown_data))
 # Initial data exploration.
 known_data.dtypes
 
-unknown_data['item_id'].value_counts()[:20]
-known_data['item_id'].value_counts()[:20]
+unknown_data['item_id'].value_counts()[:5]
+known_data['item_id'].value_counts()[:5]
 
-unknown_data['brand_id'].value_counts()[:20]
-known_data['brand_id'].value_counts()[:20]
+unknown_data['brand_id'].value_counts()[:5]
+known_data['brand_id'].value_counts()[:5]
 
-unknown_data['user_id'].value_counts()[:20]
-known_data['user_id'].value_counts()[:20]
+unknown_data['user_id'].value_counts()[:5]
+known_data['user_id'].value_counts()[:5]
 
 # User State feature inspection.
 state_group = df(known_data.groupby('user_state')['return'].sum())
