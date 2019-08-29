@@ -1,6 +1,4 @@
-<a href='http://quantlet.de/'>
-  <img src='https://github.com/alextruesdale/medium-claps-rnn/blob/master/repository_media/HU.png' alt='HU logo' title='HU' align='right' height='80' />
-</a>
+<img src='https://github.com/alextruesdale/medium-claps-rnn/blob/master/repository_media/HU.png' alt='HU logo' title='HU' align='right' height='80' />
 
 # HU Kaggle Competition – Clothing Returns Prediction
 
