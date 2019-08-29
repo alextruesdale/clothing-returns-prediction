@@ -1,0 +1,14 @@
+/slides
+
+
+.DS_Store
+__pycache__
+.ipynb_checkpoints
+*.html
+*.key
+*.Rmd
+*.pdf
+
+test_cleaners
+predictions
+modified_features
